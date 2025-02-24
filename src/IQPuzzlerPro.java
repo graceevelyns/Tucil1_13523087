@@ -1,4 +1,5 @@
 package src;
+
 // import library
 import java.awt.Color;
 import java.awt.Font;
@@ -16,6 +17,11 @@ import java.util.InputMismatchException;
 import java.util.List;
 import java.util.Scanner;
 import javax.imageio.ImageIO;
+import javax.swing.JFileChooser;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 public class IQPuzzlerPro {
     static Board board;
@@ -31,132 +37,143 @@ public class IQPuzzlerPro {
     };
 
     public static void main(String[] args) {
-        if (args.length == 0) {
-            System.out.println("Usage: java IQPuzzlerPro <input_file.txt>");
-            return;
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException e) {
+            System.out.println("Error: Gagal mengatur tampilan Windows.");
+            e.printStackTrace();
         }
 
-        String inputFile = args[0];
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(inputFile))) {
-            String[] firstLine = reader.readLine().trim().split("\\s+");
-            if (firstLine.length < 3) {
-                throw new IllegalArgumentException("Format input tidak valid. Harap berikan tiga angka dipisah oleh spasi (N, M, P).");
+        SwingUtilities.invokeLater(() -> {
+            if (args.length == 0) {
+                System.out.println("Usage: java IQPuzzlerPro <input_file.txt>");
+                return;
             }
-            int N = Integer.parseInt(firstLine[0]);
-            int M = Integer.parseInt(firstLine[1]);
-            int P = Integer.parseInt(firstLine[2]);
+            String inputFile = args[0];
+            try (BufferedReader reader = new BufferedReader(new FileReader(inputFile))) {
+                String[] firstLine = reader.readLine().trim().split("\\s+");
+                if (firstLine.length < 3) {
+                    throw new IllegalArgumentException("Format input tidak valid. Harap berikan tiga angka dipisah oleh spasi (N, M, P).");
+                }
+                int N = Integer.parseInt(firstLine[0]);
+                int M = Integer.parseInt(firstLine[1]);
+                int P = Integer.parseInt(firstLine[2]);
 
-            if (N <= 0 || M <= 0 || P <= 0) {
-                throw new IllegalArgumentException("Ukuran papan dan jumlah blok harus lebih dari 0.");
-            }
+                if (N <= 0 || M <= 0 || P <= 0) {
+                    throw new IllegalArgumentException("Ukuran papan dan jumlah blok harus lebih dari 0.");
+                }
 
-            String config = reader.readLine().trim();
-            if (!config.equals("DEFAULT") && !config.equals("CUSTOM")) {
-                throw new IllegalArgumentException("Hanya konfigurasi 'DEFAULT' atau 'CUSTOM' yang diperbolehkan.");
-            }
+                String config = reader.readLine().trim();
+                if (!config.equals("DEFAULT") && !config.equals("CUSTOM")) {
+                    throw new IllegalArgumentException("Hanya konfigurasi 'DEFAULT' atau 'CUSTOM' yang diperbolehkan.");
+                }
 
-            if (config.equals("DEFAULT")) {
-                board = new Board(N, M, false, puzzles);
-                isCustomMode = false;
-            } else {
-                char[][] customGrid = new char[N][M];
-                for (int i = 0; i < N; i++) {
-                    String line = reader.readLine().trim();
-                    if (line.length() != M) {
-                        throw new IllegalArgumentException("Baris konfigurasi tidak sesuai dengan ukuran papan.");
+                if (config.equals("DEFAULT")) {
+                    board = new Board(N, M, false, puzzles);
+                    isCustomMode = false;
+                } else {
+                    char[][] customGrid = new char[N][M];
+                    for (int i = 0; i < N; i++) {
+                        String line = reader.readLine().trim();
+                        if (line.length() != M) {
+                            throw new IllegalArgumentException("Baris konfigurasi tidak sesuai dengan ukuran papan.");
+                        }
+                        customGrid[i] = line.toCharArray();
                     }
-                    customGrid[i] = line.toCharArray();
+                    board = new Board(N, M, true, customGrid, puzzles);
+                    isCustomMode = true;
                 }
-                board = new Board(N, M, true, customGrid, puzzles);
-                isCustomMode = true;
-            }
 
-            List<char[]> blockLines = new ArrayList<>();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.trim().isEmpty()) {
-                    break;
-                }
-                blockLines.add(line.toCharArray());
-            }
-
-            List<List<char[]>> blocks = new ArrayList<>();
-            List<char[]> currentBlock = new ArrayList<>();
-            char previousChar = '\0';
-
-            for (char[] lineChars : blockLines) {
-                char firstChar = '\0';
-                for (char c : lineChars) {
-                    if (c != ' ') {
-                        firstChar = c;
+                List<char[]> blockLines = new ArrayList<>();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.trim().isEmpty()) {
                         break;
                     }
+                    blockLines.add(line.toCharArray());
                 }
-                if (firstChar != previousChar && !currentBlock.isEmpty()) {
+
+                List<List<char[]>> blocks = new ArrayList<>();
+                List<char[]> currentBlock = new ArrayList<>();
+                char previousChar = '\0';
+
+                for (char[] lineChars : blockLines) {
+                    char firstChar = '\0';
+                    for (char c : lineChars) {
+                        if (c != ' ') {
+                            firstChar = c;
+                            break;
+                        }
+                    }
+                    if (firstChar != previousChar && !currentBlock.isEmpty()) {
+                        blocks.add(currentBlock);
+                        currentBlock = new ArrayList<>();
+                    }
+                    currentBlock.add(lineChars);
+                    previousChar = firstChar;
+                }
+
+                if (!currentBlock.isEmpty()) {
                     blocks.add(currentBlock);
-                    currentBlock = new ArrayList<>();
                 }
-                currentBlock.add(lineChars);
-                previousChar = firstChar;
-            }
 
-            if (!currentBlock.isEmpty()) {
-                blocks.add(currentBlock);
-            }
-
-            if (blocks.size() != P) {
-                throw new IllegalArgumentException("Jumlah puzzle yang dibaca tidak sesuai dengan nilai P.");
-            }
-
-            for (List<char[]> block : blocks) {
-                puzzles.add(new Puzzle(block));
-            }
-
-            // time
-            long startTime = System.nanoTime();
-            hasSolution = bruteForce(0);
-            long endTime = System.nanoTime();
-            long durationInMillis = (endTime - startTime) / 1_000_000;
-
-            if (!hasSolution) {
-                System.out.println("Tidak ada solusi!");
-            } else {
-                System.out.println("Solusi ditemukan:");
-                board.print();
-            }
-
-            // iteration
-            System.out.println("Waktu pencarian: " + durationInMillis + " ms");
-            System.out.print("\n");
-            System.out.println("Banyak kasus yang ditinjau: " + iterationCount);
-
-            // solution
-            System.out.println("\nApakah Anda ingin menyimpan solusi dalam file .txt? (ya/tidak)");
-            try (Scanner scanner = new Scanner(System.in)) {
-                String saveTxtChoice = scanner.nextLine().trim().toLowerCase();
-                if (saveTxtChoice.equals("ya")) {
-                    saveSolutionToFile(inputFile);
-                } else if (!saveTxtChoice.equals("tidak")) {
-                    System.out.println("Error: Pilihan jawaban hanya ya atau tidak.");
+                if (blocks.size() != P) {
+                    throw new IllegalArgumentException("Jumlah puzzle yang dibaca tidak sesuai dengan nilai P.");
                 }
-                System.out.println("\nApakah Anda ingin menyimpan solusi dalam file .png? (ya/tidak)");
-                String savePngChoice = scanner.nextLine().trim().toLowerCase();
-                if (savePngChoice.equals("ya")) {
-                    saveSolutionToImage(inputFile);
-                } else if (!savePngChoice.equals("tidak")) {
-                    System.out.println("Error: Pilihan jawaban hanya ya atau tidak.");
+
+                for (List<char[]> block : blocks) {
+                    puzzles.add(new Puzzle(block));
                 }
+                
+                // time
+                long startTime = System.nanoTime();
+                hasSolution = bruteForce(0);
+                long endTime = System.nanoTime();
+                long durationInMillis = (endTime - startTime) / 1_000_000;
+
+                if (!hasSolution) {
+                    System.out.println("Tidak ada solusi!");
+                } else {
+                    System.out.println("Solusi ditemukan:");
+                    board.print();
+                }
+
+                // iteration
+                System.out.println("Waktu pencarian: " + durationInMillis + " ms");
+                System.out.println("Banyak kasus yang ditinjau: " + iterationCount);
+
+                // solution
+                System.out.println("\nApakah Anda ingin menyimpan solusi dalam file .txt? (ya/tidak)");
+                try (Scanner scanner = new Scanner(System.in)) {
+                    String saveTxtChoice = scanner.nextLine().trim().toLowerCase();
+                    if (saveTxtChoice.equals("ya")) {
+                        saveSolutionToFile(inputFile);
+                    } else if (!saveTxtChoice.equals("tidak")) {
+                        System.out.println("Error: Pilihan jawaban hanya ya atau tidak.");
+                    }
+
+                    System.out.println("\nApakah Anda ingin menyimpan solusi dalam file .png? (ya/tidak)");
+                    String savePngChoice = scanner.nextLine().trim().toLowerCase();
+                    if (savePngChoice.equals("ya")) {
+                        saveSolutionToImage(inputFile);
+                    } else if (savePngChoice.equals("tidak")) {
+                        System.out.println("Penyimpanan dibatalkan oleh pengguna.");
+                        System.exit(0);
+                    } else {
+                        System.out.println("Error: Pilihan jawaban hanya ya atau tidak.");
+                        System.exit(0);
+                    }
+                }
+            } catch (IOException e) {
+                System.out.println("Error: File tidak ditemukan atau tidak dapat dibaca.");
+            } catch (InputMismatchException e) {
+                System.out.println("Error: Input awal harus berupa angka (baris, kolom, jumlah blok).");
+            } catch (IllegalArgumentException e) {
+                System.out.println("Error: " + e.getMessage());
+            } catch (Exception e) {
+                System.out.println("Terjadi kesalahan: " + e.getMessage());
             }
-        } catch (IOException e) {
-            System.out.println("Error: File tidak ditemukan atau tidak dapat dibaca.");
-        } catch (InputMismatchException e) {
-            System.out.println("Error: Input awal harus berupa angka (baris, kolom, jumlah blok).");
-        } catch (IllegalArgumentException e) {
-            System.out.println("Error: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("Terjadi kesalahan: " + e.getMessage());
-        }
+        });
     }
 
     // brute-force algorithm
@@ -167,9 +184,7 @@ public class IQPuzzlerPro {
             }
             return false;
         }
-
         Puzzle currentPuzzle = puzzles.get(index);
-
         for (int row = 0; row < board.N; row++) {
             for (int col = 0; col < board.M; col++) {
                 List<char[][]> variations = currentPuzzle.generateVariations();
@@ -187,77 +202,95 @@ public class IQPuzzlerPro {
         }
         return false;
     }
-
     public static void saveSolutionToFile(String inputFileName) {
-        File outputDir = new File("test");
-        if (!outputDir.exists()) {
-            if (!outputDir.mkdir()) {
-                System.out.println("Error: Gagal membuat folder 'test'.");
-                return;
-            }
-        }
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Simpan Solusi sebagai File Teks");
 
-        String outputFileName = "test/solution_" + new File(inputFileName).getName();
-        try (PrintWriter writer = new PrintWriter(new FileWriter(outputFileName))) {
-            if (hasSolution) {
-                for (char[] row : board.grid) {
-                    for (char cell : row) {
-                        if (cell == '.' || cell == 'X') {
-                            writer.print(' ');
-                        } else {
-                            writer.print(cell);
-                        }
-                    }
-                    writer.println();
-                }
-                System.out.println("Solusi berhasil disimpan di: " + outputFileName);
-            } else {
-                writer.println("Tidak ada solusi!");
-                System.out.println("Solusi berhasil disimpan di: " + outputFileName);
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("Text Files (*.txt)", "txt");
+        fileChooser.setFileFilter(filter);
+
+        int userSelection = fileChooser.showSaveDialog(null);
+
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            File fileToSave = fileChooser.getSelectedFile();
+            String outputFileName = fileToSave.getAbsolutePath();
+
+            if (!outputFileName.toLowerCase().endsWith(".txt")) {
+                outputFileName += ".txt";
             }
-        } catch (IOException e) {
-            System.out.println("Error: Gagal menyimpan solusi ke file.");
+
+            try (PrintWriter writer = new PrintWriter(new FileWriter(outputFileName))) {
+                if (hasSolution) {
+                    for (char[] row : board.grid) {
+                        for (char cell : row) {
+                            if (cell == '.' || cell == 'X') {
+                                writer.print(' ');
+                            } else {
+                                writer.print(cell);
+                            }
+                        }
+                        writer.println();
+                    }
+                    System.out.println("Solusi berhasil disimpan di: " + outputFileName);
+                } else {
+                    writer.println("Tidak ada solusi!");
+                    System.out.println("Solusi berhasil disimpan di: " + outputFileName);
+                }
+            } catch (IOException e) {
+                System.out.println("Error: Gagal menyimpan solusi ke file.");
+            }
+        } else {
+            System.out.println("Penyimpanan dibatalkan oleh pengguna.");
         }
     }
 
     public static void saveSolutionToImage(String inputFileName) {
-        File outputDir = new File("test");
-        if (!outputDir.exists()) {
-            if (!outputDir.mkdir()) {
-                System.out.println("Error: Gagal membuat folder 'test'.");
-                return;
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Simpan Solusi sebagai Gambar");
+
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("PNG Images (*.png)", "png");
+        fileChooser.setFileFilter(filter);
+
+        int userSelection = fileChooser.showSaveDialog(null);
+
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            File fileToSave = fileChooser.getSelectedFile();
+            String outputFileName = fileToSave.getAbsolutePath();
+            if (!outputFileName.toLowerCase().endsWith(".png")) {
+                outputFileName += ".png";
             }
-        }
+            int cellSize = 50;
+            int width = board.M * cellSize;
+            int height = board.N * cellSize;
+            BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+            Graphics2D g2d = image.createGraphics();
 
-        String outputFileName = "test/solution_" + new File(inputFileName).getName().replace(".txt", ".png");
-        int cellSize = 50;
-        int width = board.M * cellSize;
-        int height = board.N * cellSize;
-        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g2d = image.createGraphics();
+            g2d.setColor(Color.WHITE);
+            g2d.fillRect(0, 0, width, height);
 
-        g2d.setColor(Color.WHITE);
-        g2d.fillRect(0, 0, width, height);
-
-        for (int row = 0; row < board.N; row++) {
-            for (int col = 0; col < board.M; col++) {
-                char cell = board.grid[row][col];
-                if (cell != '.' && cell != 'X') {
-                    int colorIndex = cell - 'A';
-                    g2d.setColor(COLORS[colorIndex % COLORS.length]);
-                    g2d.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
-                    g2d.setColor(Color.BLACK);
-                    g2d.setFont(new Font("Arial", Font.BOLD, 20));
-                    g2d.drawString(String.valueOf(cell), col * cellSize + 20, row * cellSize + 30);
+            for (int row = 0; row < board.N; row++) {
+                for (int col = 0; col < board.M; col++) {
+                    char cell = board.grid[row][col];
+                    if (cell != '.' && cell != 'X') {
+                        int colorIndex = cell - 'A';
+                        g2d.setColor(COLORS[colorIndex % COLORS.length]);
+                        g2d.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                        g2d.setColor(Color.BLACK);
+                        g2d.setFont(new Font("Arial", Font.BOLD, 20));
+                        g2d.drawString(String.valueOf(cell), col * cellSize + 20, row * cellSize + 30);
+                    }
                 }
             }
+            try {
+                ImageIO.write(image, "PNG", new File(outputFileName));
+                System.out.println("Solusi berhasil disimpan di: " + outputFileName);
+            } catch (IOException e) {
+                System.out.println("Error: Gagal menyimpan solusi sebagai gambar.");
+            }
+        } else {
+            System.out.println("Penyimpanan dibatalkan oleh pengguna.");
         }
-        try {
-            ImageIO.write(image, "PNG", new File(outputFileName));
-            System.out.println("Solusi berhasil disimpan di: " + outputFileName);
-        } catch (IOException e) {
-            System.out.println("Error: Gagal menyimpan solusi sebagai gambar.");
-        }
+        System.exit(0);
     }
 }
 
