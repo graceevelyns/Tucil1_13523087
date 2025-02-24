@@ -45,6 +45,10 @@ public class IQPuzzlerPro {
         }
 
         SwingUtilities.invokeLater(() -> {
+            System.out.println("**********************************************");
+            System.out.println("* Selamat Datang di IQ Puzzler PRO Solver!   *");
+            System.out.println("*           Let's get puzzling!              *");
+            System.out.println("**********************************************");
             if (args.length == 0) {
                 System.out.println("Usage: java IQPuzzlerPro <input_file.txt>");
                 return;
@@ -184,7 +188,9 @@ public class IQPuzzlerPro {
             }
             return false;
         }
+
         Puzzle currentPuzzle = puzzles.get(index);
+
         for (int row = 0; row < board.N; row++) {
             for (int col = 0; col < board.M; col++) {
                 List<char[][]> variations = currentPuzzle.generateVariations();
@@ -202,23 +208,31 @@ public class IQPuzzlerPro {
         }
         return false;
     }
+
+    // Simpan solusi ke file teks
     public static void saveSolutionToFile(String inputFileName) {
+        // Buat JFileChooser
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Simpan Solusi sebagai File Teks");
 
+        // Set filter untuk file .txt
         FileNameExtensionFilter filter = new FileNameExtensionFilter("Text Files (*.txt)", "txt");
         fileChooser.setFileFilter(filter);
 
+        // Tampilkan dialog simpan file
         int userSelection = fileChooser.showSaveDialog(null);
 
+        // Jika pengguna memilih "Simpan"
         if (userSelection == JFileChooser.APPROVE_OPTION) {
             File fileToSave = fileChooser.getSelectedFile();
             String outputFileName = fileToSave.getAbsolutePath();
 
+            // Tambahkan ekstensi .txt jika belum ada
             if (!outputFileName.toLowerCase().endsWith(".txt")) {
                 outputFileName += ".txt";
             }
 
+            // Tulis solusi ke file
             try (PrintWriter writer = new PrintWriter(new FileWriter(outputFileName))) {
                 if (hasSolution) {
                     for (char[] row : board.grid) {
@@ -244,21 +258,30 @@ public class IQPuzzlerPro {
         }
     }
 
+    // Simpan solusi ke gambar (PNG)
     public static void saveSolutionToImage(String inputFileName) {
+        // Buat JFileChooser
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Simpan Solusi sebagai Gambar");
 
+        // Set filter untuk file .png
         FileNameExtensionFilter filter = new FileNameExtensionFilter("PNG Images (*.png)", "png");
         fileChooser.setFileFilter(filter);
 
+        // Tampilkan dialog simpan file
         int userSelection = fileChooser.showSaveDialog(null);
 
+        // Jika pengguna memilih "Simpan"
         if (userSelection == JFileChooser.APPROVE_OPTION) {
             File fileToSave = fileChooser.getSelectedFile();
             String outputFileName = fileToSave.getAbsolutePath();
+
+            // Tambahkan ekstensi .png jika belum ada
             if (!outputFileName.toLowerCase().endsWith(".png")) {
                 outputFileName += ".png";
             }
+
+            // Buat gambar dan simpan
             int cellSize = 50;
             int width = board.M * cellSize;
             int height = board.N * cellSize;
@@ -290,10 +313,13 @@ public class IQPuzzlerPro {
         } else {
             System.out.println("Penyimpanan dibatalkan oleh pengguna.");
         }
+
+        // Akhiri program setelah menyimpan atau membatalkan
         System.exit(0);
     }
 }
 
+// Kelas Board dan Puzzle tetap sama seperti sebelumnya
 class Board {
     int N, M;
     char[][] grid;
