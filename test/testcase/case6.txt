@@ -1,0 +1,8 @@
+3 5 2
+CUSTOM
+..X..
+.XXX.
+..X..
+ A
+AAA
+B
